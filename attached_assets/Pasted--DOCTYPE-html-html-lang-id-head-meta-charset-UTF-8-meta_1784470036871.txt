@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>Erlangga Stock Opname + Barcode</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+
+    <!-- Library HTML5-QRCode untuk scan barcode (semua jenis) -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --green-dark: #1e3d32;
+            --green-medium: #2a5a48;
+            --green-light: #3a7a62;
+            --green-pale: #e8f0ec;
+            --cream: #faf8f5;
+            --white: #ffffff;
+            --gold: #c9a96e;
+            --gold-light: #e8d5a8;
+            --text-primary: #1e2b26;
+            --text-secondary: #4a5a54;
+            --text-muted: #7a8a84;
+            --shadow-sm: 0 2px 8px rgba(30, 61, 50, 0.08);
+            --shadow-md: 0 8px 32px rgba(30, 61, 50, 0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px 16px 80px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(145deg, #1a352c 0%, var(--green-dark) 100%);
+            border-radius: var(--radius);
+            padding: 24px 24px 20px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            top: -60%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(201, 169, 110, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -10%;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(201, 169, 110, 0.04) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 2px 12px 2px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--gold-light);
+            width: fit-content;
+            margin-bottom: 6px;
+        }
+
+        .header-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--gold);
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            font-size: 26px;
+            letter-spacing: -0.5px;
+            color: var(--white);
+            line-height: 1.2;
+        }
+        .header h1 span { color: var(--gold-light); }
+
+        .header-sub {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.55);
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+
+        /* ===== CARD ===== */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px 20px 24px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 16px;
+            border: 1px solid rgba(30, 61, 50, 0.04);
+            transition: box-shadow var(--transition);
+        }
+        .card:focus-within {
+            box-shadow: var(--shadow-md);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 0.2px;
+        }
+        .form-label .required {
+            color: #d9534f;
+            margin-left: 2px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            border: 1.5px solid #e2e8e4;
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--text-primary);
+            transition: border-color var(--transition), box-shadow var(--transition);
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--green-medium);
+            box-shadow: 0 0 0 4px rgba(42, 90, 72, 0.08);
+        }
+        .form-control::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .form-control[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .form-control[type="number"]::-webkit-outer-spin-button,
+        .form-control[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+        .select-wrapper::after {
+            content: '▾';
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: var(--text-muted);
+            pointer-events: none;
+            transition: transform var(--transition);
+        }
+        .select-wrapper select:focus + .select-wrapper::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        .select-wrapper select {
+            padding-right: 40px;
+            cursor: pointer;
+            background: var(--white);
+        }
+
+        /* ===== SCAN BUTTON ===== */
+        .scan-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--green-dark);
+            color: var(--white);
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background var(--transition);
+            margin-top: 6px;
+        }
+        .scan-btn:hover { background: var(--green-medium); }
+        .scan-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* ===== SCANNER CONTAINER ===== */
+        #scanner-container {
+            display: none;
+            margin-top: 12px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+        #scanner-container.active {
+            display: block;
+        }
+        #scanner-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .scanner-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== BUTTON SUBMIT ===== */
+        .btn-submit {
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            color: var(--white);
+            background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-medium) 100%);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 16px rgba(30, 61, 50, 0.2);
+        }
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30, 61, 50, 0.25);
+        }
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0px);
+            box-shadow: 0 4px 12px rgba(30, 61, 50, 0.15);
+        }
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-submit .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(255,255,255,0.25);
+            border-top-color: var(--white);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        .btn-submit.loading .spinner {
+            display: inline-block;
+        }
+        .btn-submit.loading .btn-text {
+            opacity: 0.8;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== NOTIFICATION ===== */
+        .notification {
+            display: none;
+            padding: 16px 18px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            align-items: center;
+            gap: 12px;
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid transparent;
+        }
+        .notification.show {
+            display: flex;
+        }
+        .notification.success {
+            background: #e6f4ee;
+            border-color: #a3d4b8;
+            color: #1a5a3a;
+        }
+        .notification.error {
+            background: #fde8e8;
+            border-color: #f5b8b8;
+            color: #a03333;
+        }
+        .notification .notif-icon {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .notification .notif-msg {
+            flex: 1;
+        }
+        .notification .notif-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: currentColor;
+            opacity: 0.5;
+            cursor: pointer;
+            padding: 4px;
+            transition: opacity var(--transition);
+            line-height: 1;
+        }
+        .notification .notif-close:hover {
+            opacity: 1;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .store-saved {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+        .store-saved.show {
+            opacity: 1;
+        }
+        .store-saved .check {
+            color: var(--green-medium);
+        }
+
+        @media (min-width: 600px) {
+            body { padding: 32px 24px 80px; }
+            .header h1 { font-size: 32px; }
+            .card { padding: 28px 28px 32px; }
+            .form-control { font-size: 16px; padding: 14px 18px; }
+            .btn-submit { padding: 16px 28px; font-size: 17px; }
+        }
+        @media (max-width: 380px) {
+            body { padding: 12px 12px 60px; }
+            .header { padding: 18px 18px 16px; }
+            .header h1 { font-size: 22px; }
+            .card { padding: 16px 16px 20px; }
+            .form-control { font-size: 14px; padding: 10px 14px; }
+            .btn-submit { font-size: 15px; padding: 12px 20px; }
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            padding: 4px 0;
+            letter-spacing: 0.3px;
+            opacity: 0.7;
+        }
+        .footer-note strong {
+            color: var(--green-medium);
+            font-weight: 500;
+        }
+
+        .select-wrapper select::-webkit-scrollbar {
+            width: 6px;
+        }
+        .select-wrapper select::-webkit-scrollbar-track {
+            background: var(--cream);
+            border-radius: 8px;
+        }
+        .select-wrapper select::-webkit-scrollbar-thumb {
+            background: var(--green-light);
+            border-radius: 8px;
+        }
+        .select-wrapper select::-webkit-scrollbar-thumb:hover {
+            background: var(--green-medium);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app" id="app">
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-badge">
+                <span class="dot"></span>
+                Stock Opname + Barcode
+            </div>
+            <h1>Erlangga <span>Stock</span> Opname</h1>
+            <p class="header-sub">Scan barcode · catat stok · langsung masuk ke Google Sheets</p>
+        </div>
+    </header>
+
+    <!-- NOTIFICATION -->
+    <div class="notification" id="notification" role="alert">
+        <span class="notif-icon" id="notifIcon">✅</span>
+        <span class="notif-msg" id="notifMsg">Berhasil disimpan!</span>
+        <button class="notif-close" id="notifClose" aria-label="Tutup notifikasi">✕</button>
+    </div>
+
+    <!-- FORM CARD -->
+    <div class="card">
+        <!-- Nama Toko -->
+        <div class="form-group">
+            <label class="form-label" for="storeName">Nama Toko <span class="required">*</span></label>
+            <input type="text" id="storeName" class="form-control" placeholder="Contoh: Toko Erlangga Jaya" autocomplete="off" />
+            <div class="store-saved" id="storeSaved">
+                <span class="check">✓</span> Tersimpan otomatis
+            </div>
+        </div>
+
+        <!-- Tipe Transaksi -->
+        <div class="form-group">
+            <label class="form-label" for="transactionType">Tipe Transaksi <span class="required">*</span></label>
+            <div class="select-wrapper">
+                <select id="transactionType" class="form-control">
+                    <option value="">— Pilih tipe —</option>
+                    <option value="Stock Awal">Stock Awal</option>
+                    <option value="Penjualan">Penjualan</option>
+                    <option value="Pembelian">Pembelian</option>
+                    <option value="Retur">Retur</option>
+                    <option value="Stock Opname">Stock Opname</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Nama Produk + Tombol Scan -->
+        <div class="form-group">
+            <label class="form-label" for="productSelect">Nama Produk <span class="required">*</span></label>
+            <div class="select-wrapper">
+                <select id="productSelect" class="form-control">
+                    <option value="">— Pilih produk —</option>
+                </select>
+            </div>
+            <button type="button" class="scan-btn" id="scanBtn">
+                <span>📷</span> Scan Barcode
+            </button>
+            <!-- Container untuk kamera scanner -->
+            <div id="scanner-container">
+                <button class="scanner-close" id="closeScanner">✕</button>
+                <div id="scanner-reader" style="width:100%;"></div>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                Arahkan kamera ke barcode produk. Hasil scan akan mengisi otomatis.
+            </div>
+        </div>
+
+        <!-- Jumlah – dengan pattern untuk keyboard angka di iOS -->
+        <div class="form-group">
+            <label class="form-label" for="quantity">Jumlah Stok <span class="required">*</span></label>
+            <input type="number" id="quantity" class="form-control" placeholder="Masukkan jumlah" min="0" step="1" inputmode="numeric" pattern="[0-9]*" />
+        </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button class="btn-submit" id="submitBtn">
+        <span class="btn-icon">💾</span>
+        <span class="btn-text">Simpan Data</span>
+        <span class="spinner"></span>
+    </button>
+
+    <p class="footer-note">
+        <strong>Erlangga Stock Opname</strong> · Data langsung tersimpan ke Google Sheets
+    </p>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        // ================================================================
+        // 1. DATA PRODUK (MASTER) – Tambahkan produk di sini
+        // ================================================================
+        const PRODUCT_MASTER = [
+            { barcode: '8993137713641', name: 'Kahf Bright Fresh Sunscreen Moisturizer SPF 35', category: 'Sunscreen' }
+            // Tambahkan produk lain dengan format:
+            // { barcode: 'kode_barcode', name: 'Nama Produk', category: 'Kategori' },
+        ];
+
+        // ================================================================
+        // 2. DOM REFS
+        // ================================================================
+        const storeNameInput = document.getElementById('storeName');
+        const transactionType = document.getElementById('transactionType');
+        const productSelect = document.getElementById('productSelect');
+        const quantityInput = document.getElementById('quantity');
+        const submitBtn = document.getElementById('submitBtn');
+        const notification = document.getElementById('notification');
+        const notifIcon = document.getElementById('notifIcon');
+        const notifMsg = document.getElementById('notifMsg');
+        const notifClose = document.getElementById('notifClose');
+        const storeSaved = document.getElementById('storeSaved');
+        const scanBtn = document.getElementById('scanBtn');
+        const scannerContainer = document.getElementById('scanner-container');
+        const closeScanner = document.getElementById('closeScanner');
+
+        // ================================================================
+        // 3. GOOGLE APPS SCRIPT WEB APP URL (GANTI DENGAN URL ANDA)
+        // ================================================================
+        // ⚠️ WAJIB GANTI: masukkan URL Web App milik Anda di sini.
+        const FORM_URL =
+            'https://script.google.com/macros/s/AKfycbx993YnMgStwmOrelkMGSkbjAqPuVUXQFVoeatVZ8TPFvxHMoZK_P97eSjafnGpNGMZ/exec';
+
+        // ================================================================
+        // 4. POPULATE DROPDOWN PRODUK (dari PRODUCT_MASTER)
+        // ================================================================
+        function populateProductDropdown() {
+            while (productSelect.options.length > 0) productSelect.remove(0);
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '— Pilih produk —';
+            productSelect.appendChild(defaultOption);
+
+            // Kelompokkan berdasarkan kategori
+            const categories = {};
+            PRODUCT_MASTER.forEach(p => {
+                if (!categories[p.category]) categories[p.category] = [];
+                categories[p.category].push(p);
+            });
+
+            for (const [cat, items] of Object.entries(categories)) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = cat;
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.name;
+                    option.textContent = item.name;
+                    option.dataset.barcode = item.barcode;
+                    optgroup.appendChild(option);
+                });
+                productSelect.appendChild(optgroup);
+            }
+        }
+        populateProductDropdown();
+
+        // ================================================================
+        // 5. LOCAL STORAGE – Nama Toko
+        // ================================================================
+        const STORAGE_KEY = 'erlangga_store_name';
+
+        function loadStoreName() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                storeNameInput.value = saved;
+                storeSaved.classList.add('show');
+            }
+        }
+
+        function saveStoreName(name) {
+            if (name && name.trim().length > 0) {
+                localStorage.setItem(STORAGE_KEY, name.trim());
+                storeSaved.classList.add('show');
+            } else {
+                localStorage.removeItem(STORAGE_KEY);
+                storeSaved.classList.remove('show');
+            }
+        }
+
+        loadStoreName();
+        storeNameInput.addEventListener('input', function() {
+            saveStoreName(this.value);
+        });
+
+        // ================================================================
+        // 6. NOTIFICATION
+        // ================================================================
+        function showNotification(message, type = 'success') {
+            const iconMap = { success: '✅', error: '❌' };
+            notifIcon.textContent = iconMap[type] || '✅';
+            notifMsg.textContent = message;
+            notification.className = 'notification show ' + type;
+            clearTimeout(window._notifTimer);
+            window._notifTimer = setTimeout(hideNotification, 5000);
+        }
+
+        function hideNotification() {
+            notification.className = 'notification';
+            clearTimeout(window._notifTimer);
+        }
+
+        notifClose.addEventListener('click', hideNotification);
+
+        // ================================================================
+        // 7. FITUR SCAN BARCODE – MODE BEBAS (semua jenis barcode)
+        // ================================================================
+        let html5QrCode = null;
+        let isScanning = false;
+
+        function startScanner() {
+            if (isScanning) return;
+            scannerContainer.classList.add('active');
+
+            // 1. Hapus batasan jenis barcode agar bisa scan semua jenis (QR, Code 128, EAN, dll)
+            html5QrCode = new Html5Qrcode("scanner-reader");
+
+            const config = {
+                fps: 10, // Turunkan sedikit agar HP tidak terlalu berat/panas
+                qrbox: 250 // Ubah jadi kotak simetris 250x250 agar lebih gampang fokus di HP
+                // aspectRatio kita hapus agar otomatis mengikuti rasio layar HP Anda
+            };
+
+            html5QrCode.start({ facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanError
+            ).then(() => {
+                isScanning = true;
+                // Tombol tetap aktif, ubah teks menjadi "Tutup Kamera"
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '<span>⏹️</span> Tutup Kamera';
+            }).catch(err => {
+                console.error('Gagal start scanner:', err);
+                showNotification('Gagal mengakses kamera. Pastikan izin kamera diberikan.', 'error');
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    scannerContainer.classList.remove('active');
+                    isScanning = false;
+                    scanBtn.disabled = false;
+                    scanBtn.innerHTML = '<span>📷</span> Scan Barcode';
+                }).catch(err => {
+                    console.warn('Gagal stop scanner:', err);
+                    scannerContainer.classList.remove('active');
+                    isScanning = false;
+                    scanBtn.disabled = false;
+                    scanBtn.innerHTML = '<span>📷</span> Scan Barcode';
+                });
+            } else {
+                scannerContainer.classList.remove('active');
+                isScanning = false;
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '<span>📷</span> Scan Barcode';
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log('Barcode terbaca:', decodedText);
+
+            const found = PRODUCT_MASTER.find(p => p.barcode === decodedText);
+            if (found) {
+                // Set dropdown ke produk yang cocok
+                for (let i = 0; i < productSelect.options.length; i++) {
+                    const opt = productSelect.options[i];
+                    if (opt.value === found.name) {
+                        productSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+                showNotification(`Produk ditemukan: ${found.name}`, 'success');
+                quantityInput.focus();
+            } else {
+                showNotification(`Barcode tidak dikenali: ${decodedText}. Silakan pilih manual.`, 'error');
+            }
+            stopScanner();
+        }
+
+        function onScanError(err) {
+            // Abaikan error scan biasa
+        }
+
+        // Event tombol scan – sekarang bisa digunakan untuk membatalkan scan
+        scanBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (isScanning) {
+                stopScanner();
+            } else {
+                startScanner();
+            }
+        });
+
+        // Tombol close scanner (X) tetap berfungsi
+        closeScanner.addEventListener('click', function() {
+            stopScanner();
+        });
+
+        // ================================================================
+        // 8. SUBMIT HANDLER – Perbaikan CORS dan Content-Type
+        // ================================================================
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            const store = storeNameInput.value.trim();
+            const transaction = transactionType.value;
+            const product = productSelect.value;
+            const quantity = quantityInput.value.trim();
+
+            if (!store) {
+                showNotification('Masukkan nama toko terlebih dahulu.', 'error');
+                storeNameInput.focus();
+                return;
+            }
+            if (!transaction) {
+                showNotification('Pilih tipe transaksi.', 'error');
+                transactionType.focus();
+                return;
+            }
+            if (!product) {
+                showNotification('Pilih produk yang akan di-stock opname.', 'error');
+                productSelect.focus();
+                return;
+            }
+            if (!quantity || isNaN(parseInt(quantity)) || parseInt(quantity) < 0) {
+                showNotification('Masukkan jumlah stok yang valid (angka ≥ 0).', 'error');
+                quantityInput.focus();
+                return;
+            }
+
+            const qtyNum = parseInt(quantity);
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+            const originalText = submitBtn.querySelector('.btn-text').textContent;
+            submitBtn.querySelector('.btn-text').textContent = 'Mengirim...';
+
+            try {
+                const payload = {
+                    store: store,
+                    transaction: transaction,
+                    product: product,
+                    quantity: qtyNum
+                };
+
+                // 🔧 PERBAIKAN: mode dihapus, Content-Type diubah menjadi text/plain
+                const response = await fetch(FORM_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showNotification(`Data stok "${product}" berhasil disimpan!`, 'success');
+                    quantityInput.value = '';
+                    quantityInput.focus();
+                } else {
+                    throw new Error(result.message || 'Gagal menyimpan data.');
+                }
+            } catch (err) {
+                console.error('Submit error:', err);
+                showNotification('Gagal mengirim data. Periksa koneksi atau coba lagi.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('loading');
+                submitBtn.querySelector('.btn-text').textContent = originalText;
+            }
+        }
+
+        submitBtn.addEventListener('click', handleSubmit);
+
+        quantityInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitBtn.click();
+            }
+        });
+
+        storeNameInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                transactionType.focus();
+            }
+        });
+        transactionType.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                productSelect.focus();
+            }
+        });
+        productSelect.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                quantityInput.focus();
+            }
+        });
+
+        // ================================================================
+        // 9. FOCUS MANAGEMENT
+        // ================================================================
+        if (!storeNameInput.value) {
+            storeNameInput.focus();
+        } else {
+            transactionType.focus();
+        }
+
+        console.log('✅ Erlangga Stock Opname + Barcode (Mode Bebas) siap digunakan!');
+        console.log('📝 Total produk dalam master:', PRODUCT_MASTER.length);
+    })();
+</script>
+
+</body>
+</html>

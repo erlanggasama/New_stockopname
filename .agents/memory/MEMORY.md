@@ -1,0 +1,1 @@
+- [Uploaded app registration](artifact-registration.md) — source aplikasi dari ZIP perlu didaftarkan sebagai artifact agar workflow preview tersedia.

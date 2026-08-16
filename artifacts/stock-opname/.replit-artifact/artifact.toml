@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Stock Opname"
+description = "A mobile-friendly stock opname app for scanning products and sending inventory counts to Google Sheets."
+version = "1.0.0"
+id = "artifacts/stock-opname"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22765
+
+[services.development]
+run = "pnpm --filter @workspace/stock-opname run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/stock-opname", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/stock-opname/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22765"
+BASE_PATH = "/"
