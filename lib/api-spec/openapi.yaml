@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: stock
+    description: Stock storage and spreadsheet synchronization
 paths:
   /healthz:
     get:
@@ -24,6 +26,85 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /stock-entries:
+    get:
+      operationId: listStockEntries
+      tags: [stock]
+      summary: List stored stock entries
+      description: Returns the latest stock transactions stored on the server.
+      parameters:
+        - name: store
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Stock entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockEntry"
+    post:
+      operationId: createStockEntry
+      tags: [stock]
+      summary: Store and synchronize a stock entry
+      description: Stores a stock transaction on the server first, then attempts to mirror it to Google Sheets.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockEntryInput"
+      responses:
+        "201":
+          description: Stored stock entry with spreadsheet synchronization status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockEntry"
+        "400":
+          description: Invalid stock entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /stock-entries/{id}/retry-sync:
+    post:
+      operationId: retryStockEntrySync
+      tags: [stock]
+      summary: Retry spreadsheet synchronization
+      description: Retries sending a server-stored stock entry to Google Sheets.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Updated stock entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockEntry"
+        "404":
+          description: Stock entry not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +114,80 @@ components:
           type: string
       required:
         - status
+    StockEntryInput:
+      type: object
+      properties:
+        clientId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        store:
+          type: string
+          minLength: 1
+          maxLength: 200
+        transaction:
+          type: string
+          minLength: 1
+          maxLength: 100
+        product:
+          type: string
+          minLength: 1
+          maxLength: 300
+        quantity:
+          type: integer
+          minimum: 0
+        barcode:
+          type: string
+          minLength: 1
+          maxLength: 100
+        displayQuantity:
+          type: integer
+          minimum: 0
+        secondaryDisplayQuantity:
+          type: integer
+          minimum: 0
+        warehouseQuantity:
+          type: integer
+          minimum: 0
+      required:
+        - clientId
+        - store
+        - transaction
+        - product
+        - quantity
+        - barcode
+        - displayQuantity
+        - secondaryDisplayQuantity
+        - warehouseQuantity
+    StockEntry:
+      allOf:
+        - $ref: "#/components/schemas/StockEntryInput"
+        - type: object
+          properties:
+            id:
+              type: integer
+            syncStatus:
+              type: string
+              enum: [pending, synced, failed]
+            syncError:
+              type: ["string", "null"]
+            createdAt:
+              type: string
+              format: date-time
+            syncedAt:
+              type: ["string", "null"]
+              format: date-time
+          required:
+            - id
+            - syncStatus
+            - syncError
+            - createdAt
+            - syncedAt
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
 

@@ -1,1 +1,2 @@
 - [Uploaded app registration](artifact-registration.md) — source aplikasi dari ZIP perlu didaftarkan sebagai artifact agar workflow preview tersedia.
+- [Stock dual storage](stock-dual-storage.md) — server menyimpan transaksi lebih dulu, lalu spreadsheet menjadi mirror dengan status sinkronisasi.

@@ -5,9 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export interface HealthStatus {
-  status: string;
-}
 
 export interface StockEntryInput {
   /**
@@ -44,36 +41,3 @@ export interface StockEntryInput {
   /** @minimum 0 */
   warehouseQuantity: number;
 }
-
-export type StockEntrySyncStatus = typeof StockEntrySyncStatus[keyof typeof StockEntrySyncStatus];
-
-
-export const StockEntrySyncStatus = {
-  pending: 'pending',
-  synced: 'synced',
-  failed: 'failed',
-} as const;
-
-export type StockEntry = StockEntryInput & ({
-  id: number;
-  syncStatus: StockEntrySyncStatus;
-  /** @nullable */
-  syncError: string | null;
-  createdAt: string;
-  /** @nullable */
-  syncedAt: string | null;
-});
-
-export interface ErrorResponse {
-  error: string;
-}
-
-export type ListStockEntriesParams = {
-store?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-};
-

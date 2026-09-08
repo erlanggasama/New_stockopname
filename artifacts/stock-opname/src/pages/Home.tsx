@@ -1,12 +1,29 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreName } from '@/hooks/useStoreName';
-import { submitStockEntry } from '@/lib/sheets';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { ProductManager } from '@/components/ProductManager';
 import { useToast } from '@/hooks/use-toast';
-import { PackageSearch, Send, QrCode, RefreshCw, Box } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import {
+  AlertTriangle,
+  Box,
+  CheckCircle2,
+  Cloud,
+  Clock3,
+  PackageSearch,
+  QrCode,
+  RefreshCw,
+  RotateCcw,
+  Send,
+} from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getListStockEntriesQueryKey,
+  useCreateStockEntry,
+  useListStockEntries,
+  useRetryStockEntrySync,
+  type StockEntry,
+} from '@workspace/api-client-react';
 
 const TRANSACTIONS = [
   'Stock Opname',
@@ -29,6 +46,7 @@ export default function Home() {
   const [secondaryDisplayQuantity, setSecondaryDisplayQuantity] = useState<number | ''>('');
   const [warehouseQuantity, setWarehouseQuantity] = useState<number | ''>('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const queryClient = useQueryClient();
   const isStockOpname = transaction === 'Stock Opname';
   const totalStock = useMemo(
     () =>
@@ -38,35 +56,82 @@ export default function Home() {
     [displayQuantity, secondaryDisplayQuantity, warehouseQuantity],
   );
 
-  const submitMutation = useMutation({
-    mutationFn: submitStockEntry,
-    onSuccess: () => {
-      toast({
-        title: 'Berhasil',
-        description: 'Data stock berhasil disimpan ke Google Sheets.',
-      });
-      setQuantity('');
-      setDisplayQuantity('');
-      setSecondaryDisplayQuantity('');
-      setWarehouseQuantity('');
+  const { data: recentEntries = [], isLoading: isRecentLoading } = useListStockEntries(
+    { store: storeName || undefined, limit: 5 },
+    {
+      query: {
+        queryKey: getListStockEntriesQueryKey({ store: storeName || undefined, limit: 5 }),
+        refetchInterval: 5000,
+      },
     },
-    onError: (err: any) => {
+  );
+
+  const retryMutation = useRetryStockEntrySync({
+    mutation: {
+      onSuccess: (entry) => {
+        queryClient.invalidateQueries({ queryKey: getListStockEntriesQueryKey() });
+        toast({
+          title: entry.syncStatus === 'synced' ? 'Berhasil Sinkron' : 'Belum Tersinkron',
+          description:
+            entry.syncStatus === 'synced'
+              ? 'Data berhasil dikirim ulang ke Google Sheets.'
+              : 'Server tetap menyimpan data, tetapi spreadsheet belum menerima data.',
+          variant: entry.syncStatus === 'synced' ? 'default' : 'destructive',
+        });
+      },
+      onError: (err: any) => {
+        toast({
+          title: 'Gagal Sinkron',
+          description: err.message || 'Data tetap aman di server dan dapat dicoba lagi.',
+          variant: 'destructive',
+        });
+      },
+    },
+  });
+
+  const submitMutation = useCreateStockEntry({
+    mutation: {
+      onSuccess: (entry) => {
+        queryClient.invalidateQueries({ queryKey: getListStockEntriesQueryKey() });
+        if (entry.syncStatus === 'synced') {
+          toast({
+            title: 'Tersimpan & Tersinkron',
+            description: 'Data sudah tersimpan di server dan Google Sheets.',
+          });
+        } else {
+          toast({
+            title: 'Tersimpan di Server',
+            description: 'Spreadsheet belum menerima data. Anda bisa mencoba sinkron ulang dari daftar transaksi.',
+            variant: 'destructive',
+          });
+        }
+        setQuantity('');
+        setDisplayQuantity('');
+        setSecondaryDisplayQuantity('');
+        setWarehouseQuantity('');
+      },
+      onError: (err: any) => {
       toast({
-        title: 'Gagal Menyimpan',
-        description: err.message || 'Terjadi kesalahan saat menyimpan data.',
+        title: 'Gagal Menyimpan ke Server',
+        description: err.message || 'Data belum tersimpan. Silakan coba lagi.',
         variant: 'destructive',
       });
-    }
+      },
+    },
   });
 
   const getPayload = () => {
     const product = products.find(p => p.barcode === selectedBarcode);
     return {
+      clientId: globalThis.crypto.randomUUID(),
       store: storeName,
       transaction,
       product: product ? product.name : '',
       quantity: isStockOpname ? totalStock : Number(quantity),
-      barcode: selectedBarcode
+      barcode: selectedBarcode,
+      displayQuantity: isStockOpname ? Number(displayQuantity || 0) : 0,
+      secondaryDisplayQuantity: isStockOpname ? Number(secondaryDisplayQuantity || 0) : 0,
+      warehouseQuantity: isStockOpname ? Number(warehouseQuantity || 0) : 0,
     };
   };
 
@@ -86,7 +151,7 @@ export default function Home() {
       });
       return;
     }
-    submitMutation.mutate(getPayload());
+    submitMutation.mutate({ data: getPayload() });
   };
 
   const handleScanSuccess = useCallback((code: string) => {
@@ -112,6 +177,28 @@ export default function Home() {
     const cats = new Set(products.map(p => p.category));
     return Array.from(cats).sort();
   }, [products]);
+
+  const getSyncMeta = (entry: StockEntry) => {
+    if (entry.syncStatus === 'synced') {
+      return {
+        label: 'Tersinkron',
+        icon: CheckCircle2,
+        className: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      };
+    }
+    if (entry.syncStatus === 'failed') {
+      return {
+        label: 'Perlu dicoba lagi',
+        icon: AlertTriangle,
+        className: 'text-amber-700 bg-amber-50 border-amber-200',
+      };
+    }
+    return {
+      label: 'Menunggu',
+      icon: Clock3,
+      className: 'text-slate-600 bg-slate-50 border-slate-200',
+    };
+  };
 
   return (
     <div className="min-h-[100dvh] w-full bg-background flex flex-col items-center pb-12">
@@ -327,6 +414,79 @@ export default function Home() {
           onUpdate={updateProduct}
           onReplace={replaceProducts}
         />
+
+        <section className="bg-card border border-border shadow-sm rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Cloud size={18} className="text-primary" />
+                <h2 className="font-serif text-lg font-bold text-foreground">Backup Server</h2>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Data terbaru diperbarui otomatis setiap beberapa detik.
+              </p>
+            </div>
+            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground border border-border rounded-full px-2 py-1">
+              Live
+            </span>
+          </div>
+
+          {isRecentLoading ? (
+            <div className="text-sm text-muted-foreground py-3">Memuat data server...</div>
+          ) : recentEntries.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border px-4 py-5 text-center">
+              <p className="text-sm font-medium text-foreground">Belum ada transaksi tersimpan</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Setiap data yang disimpan akan muncul di sini.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentEntries.map((entry) => {
+                const syncMeta = getSyncMeta(entry);
+                const SyncIcon = syncMeta.icon;
+                return (
+                  <div key={entry.id} className="rounded-xl border border-border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{entry.product}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {entry.transaction} · {entry.quantity} stok ·{' '}
+                          {new Date(entry.createdAt).toLocaleString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <span className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold ${syncMeta.className}`}>
+                        <SyncIcon size={12} />
+                        {syncMeta.label}
+                      </span>
+                    </div>
+                    {entry.syncStatus === 'failed' && (
+                      <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
+                        <p className="text-xs text-muted-foreground">
+                          Server sudah menyimpan data ini.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => retryMutation.mutate({ id: entry.id })}
+                          disabled={retryMutation.isPending}
+                          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+                        >
+                          <RotateCcw size={13} />
+                          Coba Lagi
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </main>
 
       <BarcodeScanner 
