@@ -147,6 +147,34 @@ export const CreateStockEntryResponse = zod.object({
 
 
 /**
+ * Returns the current accumulated quantity for each SKU/barcode in a store.
+ * @summary List aggregated stock balances
+ */
+export const listStockBalancesQueryLimitDefault = 100;
+export const listStockBalancesQueryLimitMax = 100;
+
+
+
+export const ListStockBalancesQueryParams = zod.object({
+  "store": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().min(1).max(listStockBalancesQueryLimitMax).default(listStockBalancesQueryLimitDefault)
+})
+
+export const ListStockBalancesResponseItem = zod.object({
+  "store": zod.string(),
+  "product": zod.string(),
+  "barcode": zod.string(),
+  "totalQuantity": zod.number(),
+  "displayQuantity": zod.number(),
+  "secondaryDisplayQuantity": zod.number(),
+  "warehouseQuantity": zod.number(),
+  "entryCount": zod.number(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListStockBalancesResponse = zod.array(ListStockBalancesResponseItem)
+
+
+/**
  * Retries sending a server-stored stock entry to Google Sheets.
  * @summary Retry spreadsheet synchronization
  */

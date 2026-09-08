@@ -64,11 +64,32 @@ export type StockEntry = StockEntryInput & ({
   syncedAt: string | null;
 });
 
+export interface StockBalance {
+  store: string;
+  product: string;
+  barcode: string;
+  totalQuantity: number;
+  displayQuantity: number;
+  secondaryDisplayQuantity: number;
+  warehouseQuantity: number;
+  entryCount: number;
+  updatedAt: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
 
 export type ListStockEntriesParams = {
+store?: string;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type ListStockBalancesParams = {
 store?: string;
 /**
  * @minimum 1

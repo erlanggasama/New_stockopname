@@ -79,6 +79,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /stock-balances:
+    get:
+      operationId: listStockBalances
+      tags: [stock]
+      summary: List aggregated stock balances
+      description: Returns the current accumulated quantity for each SKU/barcode in a store.
+      parameters:
+        - name: store
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        "200":
+          description: Aggregated stock balances by SKU
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockBalance"
   /stock-entries/{id}/retry-sync:
     post:
       operationId: retryStockEntrySync
@@ -183,6 +212,38 @@ components:
             - syncError
             - createdAt
             - syncedAt
+    StockBalance:
+      type: object
+      properties:
+        store:
+          type: string
+        product:
+          type: string
+        barcode:
+          type: string
+        totalQuantity:
+          type: integer
+        displayQuantity:
+          type: integer
+        secondaryDisplayQuantity:
+          type: integer
+        warehouseQuantity:
+          type: integer
+        entryCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - store
+        - product
+        - barcode
+        - totalQuantity
+        - displayQuantity
+        - secondaryDisplayQuantity
+        - warehouseQuantity
+        - entryCount
+        - updatedAt
     ErrorResponse:
       type: object
       properties:

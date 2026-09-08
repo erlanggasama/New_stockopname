@@ -8,7 +8,9 @@
 
 export * from './errorResponse';
 export * from './healthStatus';
+export * from './listStockBalancesParams';
 export * from './listStockEntriesParams';
+export * from './stockBalance';
 export * from './stockEntry';
 export * from './stockEntryInput';
 export * from './stockEntrySyncStatus';

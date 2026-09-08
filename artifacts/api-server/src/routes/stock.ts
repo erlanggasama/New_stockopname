@@ -1,7 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   CreateStockEntryBody,
+  ListStockBalancesQueryParams,
   ListStockEntriesQueryParams,
   RetryStockEntrySyncParams,
 } from "@workspace/api-zod";
@@ -65,6 +66,53 @@ router.get("/stock-entries", async (req, res) => {
     .limit(parsed.data.limit ?? 25);
 
   res.json(entries.map(responseData));
+});
+
+router.get("/stock-balances", async (req, res) => {
+  const parsed = ListStockBalancesQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Parameter filter saldo tidak valid." });
+    return;
+  }
+
+  const conditions = parsed.data.store
+    ? [eq(stockEntriesTable.store, parsed.data.store)]
+    : [];
+  const stockDelta = sql<number>`
+    CASE
+      WHEN ${stockEntriesTable.transaction} = 'Penjualan' THEN -${stockEntriesTable.quantity}
+      ELSE ${stockEntriesTable.quantity}
+    END
+  `;
+  const rows = await db
+    .select({
+      store: stockEntriesTable.store,
+      product: stockEntriesTable.product,
+      barcode: stockEntriesTable.barcode,
+      totalQuantity: sql<number>`COALESCE(SUM(${stockDelta}), 0)`,
+      displayQuantity: sql<number>`COALESCE(SUM(${stockEntriesTable.displayQuantity}), 0)`,
+      secondaryDisplayQuantity: sql<number>`COALESCE(SUM(${stockEntriesTable.secondaryDisplayQuantity}), 0)`,
+      warehouseQuantity: sql<number>`COALESCE(SUM(${stockEntriesTable.warehouseQuantity}), 0)`,
+      entryCount: sql<number>`COUNT(*)`,
+      updatedAt: sql<Date>`MAX(${stockEntriesTable.createdAt})`,
+    })
+    .from(stockEntriesTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .groupBy(stockEntriesTable.store, stockEntriesTable.product, stockEntriesTable.barcode)
+    .orderBy(desc(sql`MAX(${stockEntriesTable.createdAt})`))
+    .limit(parsed.data.limit ?? 100);
+
+  res.json(
+    rows.map((row) => ({
+      ...row,
+      totalQuantity: Number(row.totalQuantity),
+      displayQuantity: Number(row.displayQuantity),
+      secondaryDisplayQuantity: Number(row.secondaryDisplayQuantity),
+      warehouseQuantity: Number(row.warehouseQuantity),
+      entryCount: Number(row.entryCount),
+      updatedAt: new Date(row.updatedAt).toISOString(),
+    })),
+  );
 });
 
 router.post("/stock-entries", async (req, res) => {

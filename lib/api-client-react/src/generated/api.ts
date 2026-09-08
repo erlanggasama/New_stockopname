@@ -22,7 +22,9 @@ import type {
 import type {
   ErrorResponse,
   HealthStatus,
+  ListStockBalancesParams,
   ListStockEntriesParams,
+  StockBalance,
   StockEntry,
   StockEntryInput
 } from './api.schemas';
@@ -288,6 +290,91 @@ export const useCreateStockEntry = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getCreateStockEntryMutationOptions(options));
     }
+
+export const getListStockBalancesUrl = (params?: ListStockBalancesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/stock-balances?${stringifiedParams}` : `/api/stock-balances`
+}
+
+/**
+ * Returns the current accumulated quantity for each SKU/barcode in a store.
+ * @summary List aggregated stock balances
+ */
+export const listStockBalances = async (params?: ListStockBalancesParams, options?: RequestInit): Promise<StockBalance[]> => {
+
+  return customFetch<StockBalance[]>(getListStockBalancesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStockBalancesQueryKey = (params?: ListStockBalancesParams,) => {
+    return [
+    `/api/stock-balances`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListStockBalancesQueryOptions = <TData = Awaited<ReturnType<typeof listStockBalances>>, TError = ErrorType<unknown>>(params?: ListStockBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStockBalancesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockBalances>>> = ({ signal }) => listStockBalances(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStockBalancesQueryResult = NonNullable<Awaited<ReturnType<typeof listStockBalances>>>
+export type ListStockBalancesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List aggregated stock balances
+ */
+
+export function useListStockBalances<TData = Awaited<ReturnType<typeof listStockBalances>>, TError = ErrorType<unknown>>(
+ params?: ListStockBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStockBalancesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRetryStockEntrySyncUrl = (id: number,) => {
 

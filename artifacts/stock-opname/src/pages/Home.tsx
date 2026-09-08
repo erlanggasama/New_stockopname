@@ -19,9 +19,12 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getListStockEntriesQueryKey,
+  getListStockBalancesQueryKey,
   useCreateStockEntry,
+  useListStockBalances,
   useListStockEntries,
   useRetryStockEntrySync,
+  type StockBalance,
   type StockEntry,
 } from '@workspace/api-client-react';
 
@@ -65,11 +68,21 @@ export default function Home() {
       },
     },
   );
+  const { data: stockBalances = [] } = useListStockBalances(
+    { store: storeName || undefined, limit: 100 },
+    {
+      query: {
+        queryKey: getListStockBalancesQueryKey({ store: storeName || undefined, limit: 100 }),
+        refetchInterval: 5000,
+      },
+    },
+  );
 
   const retryMutation = useRetryStockEntrySync({
     mutation: {
       onSuccess: (entry) => {
         queryClient.invalidateQueries({ queryKey: getListStockEntriesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListStockBalancesQueryKey() });
         toast({
           title: entry.syncStatus === 'synced' ? 'Berhasil Sinkron' : 'Belum Tersinkron',
           description:
@@ -93,6 +106,7 @@ export default function Home() {
     mutation: {
       onSuccess: (entry) => {
         queryClient.invalidateQueries({ queryKey: getListStockEntriesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListStockBalancesQueryKey() });
         if (entry.syncStatus === 'synced') {
           toast({
             title: 'Tersimpan & Tersinkron',
@@ -177,6 +191,10 @@ export default function Home() {
     const cats = new Set(products.map(p => p.category));
     return Array.from(cats).sort();
   }, [products]);
+  const selectedBalance = useMemo<StockBalance | undefined>(
+    () => stockBalances.find((balance) => balance.barcode === selectedBarcode),
+    [selectedBarcode, stockBalances],
+  );
 
   const getSyncMeta = (entry: StockEntry) => {
     if (entry.syncStatus === 'synced') {
@@ -303,6 +321,17 @@ export default function Home() {
               </div>
               {selectedBarcode && (
                 <p className="text-xs text-muted-foreground px-1 font-mono">Barcode: {selectedBarcode}</p>
+              )}
+              {selectedBalance && (
+                <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Saldo SKU tersimpan</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Akumulasi dari {selectedBalance.entryCount} input
+                    </p>
+                  </div>
+                  <span className="text-xl font-bold text-primary">{selectedBalance.totalQuantity}</span>
+                </div>
               )}
             </div>
 
@@ -442,6 +471,27 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-3">
+              {stockBalances.length > 0 && (
+                <div className="rounded-xl bg-primary/5 border border-primary/10 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                      Saldo SKU
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">berdasarkan barcode</span>
+                  </div>
+                  <div className="space-y-2">
+                    {stockBalances.slice(0, 6).map((balance) => (
+                      <div key={`${balance.store}-${balance.barcode}`} className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{balance.product}</p>
+                          <p className="text-[11px] text-muted-foreground font-mono truncate">{balance.barcode}</p>
+                        </div>
+                        <span className="shrink-0 text-lg font-bold text-primary">{balance.totalQuantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {recentEntries.map((entry) => {
                 const syncMeta = getSyncMeta(entry);
                 const SyncIcon = syncMeta.icon;
