@@ -49,15 +49,19 @@ async function updateSyncStatus(entry: StockEntry) {
 }
 
 router.get("/stock-entries", async (req, res) => {
+  const requestedStore = typeof req.query.store === "string" ? req.query.store.trim() : "";
+  if (!requestedStore) {
+    res.status(400).json({ error: "Nama toko wajib diisi untuk melihat data stok." });
+    return;
+  }
+
   const parsed = ListStockEntriesQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Parameter filter tidak valid." });
     return;
   }
 
-  const conditions = parsed.data.store
-    ? [eq(stockEntriesTable.store, parsed.data.store)]
-    : [];
+  const conditions = [eq(stockEntriesTable.store, requestedStore)];
   const entries = await db
     .select()
     .from(stockEntriesTable)
@@ -69,15 +73,19 @@ router.get("/stock-entries", async (req, res) => {
 });
 
 router.get("/stock-balances", async (req, res) => {
+  const requestedStore = typeof req.query.store === "string" ? req.query.store.trim() : "";
+  if (!requestedStore) {
+    res.status(400).json({ error: "Nama toko wajib diisi untuk melihat saldo SKU." });
+    return;
+  }
+
   const parsed = ListStockBalancesQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Parameter filter saldo tidak valid." });
     return;
   }
 
-  const conditions = parsed.data.store
-    ? [eq(stockEntriesTable.store, parsed.data.store)]
-    : [];
+  const conditions = [eq(stockEntriesTable.store, requestedStore)];
   const stockDelta = sql<number>`
     CASE
       WHEN ${stockEntriesTable.transaction} = 'Penjualan' THEN -${stockEntriesTable.quantity}

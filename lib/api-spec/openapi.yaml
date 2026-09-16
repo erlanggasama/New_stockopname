@@ -35,7 +35,7 @@ paths:
       parameters:
         - name: store
           in: query
-          required: false
+          required: true
           schema:
             type: string
         - name: limit
@@ -88,7 +88,7 @@ paths:
       parameters:
         - name: store
           in: query
-          required: false
+          required: true
           schema:
             type: string
         - name: limit

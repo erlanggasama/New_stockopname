@@ -134,7 +134,7 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
-export const getListStockEntriesUrl = (params?: ListStockEntriesParams,) => {
+export const getListStockEntriesUrl = (params: ListStockEntriesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -153,7 +153,7 @@ export const getListStockEntriesUrl = (params?: ListStockEntriesParams,) => {
  * Returns the latest stock transactions stored on the server.
  * @summary List stored stock entries
  */
-export const listStockEntries = async (params?: ListStockEntriesParams, options?: RequestInit): Promise<StockEntry[]> => {
+export const listStockEntries = async (params: ListStockEntriesParams, options?: RequestInit): Promise<StockEntry[]> => {
 
   return customFetch<StockEntry[]>(getListStockEntriesUrl(params),
   {
@@ -175,7 +175,7 @@ export const getListStockEntriesQueryKey = (params?: ListStockEntriesParams,) =>
     }
 
 
-export const getListStockEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listStockEntries>>, TError = ErrorType<unknown>>(params?: ListStockEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListStockEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listStockEntries>>, TError = ErrorType<unknown>>(params: ListStockEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -202,7 +202,7 @@ export type ListStockEntriesQueryError = ErrorType<unknown>
  */
 
 export function useListStockEntries<TData = Awaited<ReturnType<typeof listStockEntries>>, TError = ErrorType<unknown>>(
- params?: ListStockEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params: ListStockEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
@@ -291,7 +291,7 @@ export const useCreateStockEntry = <TError = ErrorType<ErrorResponse>,
       return useMutation(getCreateStockEntryMutationOptions(options));
     }
 
-export const getListStockBalancesUrl = (params?: ListStockBalancesParams,) => {
+export const getListStockBalancesUrl = (params: ListStockBalancesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -310,7 +310,7 @@ export const getListStockBalancesUrl = (params?: ListStockBalancesParams,) => {
  * Returns the current accumulated quantity for each SKU/barcode in a store.
  * @summary List aggregated stock balances
  */
-export const listStockBalances = async (params?: ListStockBalancesParams, options?: RequestInit): Promise<StockBalance[]> => {
+export const listStockBalances = async (params: ListStockBalancesParams, options?: RequestInit): Promise<StockBalance[]> => {
 
   return customFetch<StockBalance[]>(getListStockBalancesUrl(params),
   {
@@ -332,7 +332,7 @@ export const getListStockBalancesQueryKey = (params?: ListStockBalancesParams,) 
     }
 
 
-export const getListStockBalancesQueryOptions = <TData = Awaited<ReturnType<typeof listStockBalances>>, TError = ErrorType<unknown>>(params?: ListStockBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListStockBalancesQueryOptions = <TData = Awaited<ReturnType<typeof listStockBalances>>, TError = ErrorType<unknown>>(params: ListStockBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -359,7 +359,7 @@ export type ListStockBalancesQueryError = ErrorType<unknown>
  */
 
 export function useListStockBalances<TData = Awaited<ReturnType<typeof listStockBalances>>, TError = ErrorType<unknown>>(
- params?: ListStockBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params: ListStockBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 

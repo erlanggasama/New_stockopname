@@ -7,7 +7,7 @@
  */
 
 export type ListStockBalancesParams = {
-store?: string;
+store: string;
 /**
  * @minimum 1
  * @maximum 100

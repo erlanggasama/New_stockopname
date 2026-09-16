@@ -81,7 +81,7 @@ export interface ErrorResponse {
 }
 
 export type ListStockEntriesParams = {
-store?: string;
+store: string;
 /**
  * @minimum 1
  * @maximum 100
@@ -90,7 +90,7 @@ limit?: number;
 };
 
 export type ListStockBalancesParams = {
-store?: string;
+store: string;
 /**
  * @minimum 1
  * @maximum 100

@@ -27,7 +27,7 @@ export const listStockEntriesQueryLimitMax = 100;
 
 
 export const ListStockEntriesQueryParams = zod.object({
-  "store": zod.coerce.string().optional(),
+  "store": zod.coerce.string(),
   "limit": zod.coerce.number().min(1).max(listStockEntriesQueryLimitMax).default(listStockEntriesQueryLimitDefault)
 })
 
@@ -156,7 +156,7 @@ export const listStockBalancesQueryLimitMax = 100;
 
 
 export const ListStockBalancesQueryParams = zod.object({
-  "store": zod.coerce.string().optional(),
+  "store": zod.coerce.string(),
   "limit": zod.coerce.number().min(1).max(listStockBalancesQueryLimitMax).default(listStockBalancesQueryLimitDefault)
 })
 

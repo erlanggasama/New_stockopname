@@ -50,6 +50,7 @@ export default function Home() {
   const [warehouseQuantity, setWarehouseQuantity] = useState<number | ''>('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const queryClient = useQueryClient();
+  const activeStore = storeName.trim();
   const isStockOpname = transaction === 'Stock Opname';
   const totalStock = useMemo(
     () =>
@@ -60,20 +61,22 @@ export default function Home() {
   );
 
   const { data: recentEntries = [], isLoading: isRecentLoading } = useListStockEntries(
-    { store: storeName || undefined, limit: 5 },
+    { store: activeStore, limit: 5 },
     {
       query: {
-        queryKey: getListStockEntriesQueryKey({ store: storeName || undefined, limit: 5 }),
+        queryKey: getListStockEntriesQueryKey({ store: activeStore, limit: 5 }),
         refetchInterval: 5000,
+        enabled: Boolean(activeStore),
       },
     },
   );
   const { data: stockBalances = [] } = useListStockBalances(
-    { store: storeName || undefined, limit: 100 },
+    { store: activeStore, limit: 100 },
     {
       query: {
-        queryKey: getListStockBalancesQueryKey({ store: storeName || undefined, limit: 100 }),
+        queryKey: getListStockBalancesQueryKey({ store: activeStore, limit: 100 }),
         refetchInterval: 5000,
+        enabled: Boolean(activeStore),
       },
     },
   );
@@ -138,7 +141,7 @@ export default function Home() {
     const product = products.find(p => p.barcode === selectedBarcode);
     return {
       clientId: globalThis.crypto.randomUUID(),
-      store: storeName,
+      store: activeStore,
       transaction,
       product: product ? product.name : '',
       quantity: isStockOpname ? totalStock : Number(quantity),
@@ -155,7 +158,7 @@ export default function Home() {
       ? displayQuantity === '' && secondaryDisplayQuantity === '' && warehouseQuantity === ''
       : quantity === '';
 
-    if (!storeName || !transaction || !selectedBarcode || hasNoStockInput) {
+    if (!activeStore || !transaction || !selectedBarcode || hasNoStockInput) {
       toast({
         title: 'Peringatan',
         description: isStockOpname
@@ -242,8 +245,8 @@ export default function Home() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 relative z-10">
             {/* Store Name */}
             <div className="space-y-1.5">
-              <label htmlFor="store" className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Box size={16} className="text-muted-foreground" /> Nama Toko
+               <label htmlFor="store" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                 <Box size={16} className="text-muted-foreground" /> Toko Aktif
               </label>
               <input
                 id="store"
@@ -254,6 +257,9 @@ export default function Home() {
                 placeholder="Contoh: Toko Sentosa"
                 required
               />
+               <p className="px-1 text-[11px] text-muted-foreground">
+                 Saldo SKU dan riwayat hanya dihitung untuk toko ini.
+               </p>
             </div>
 
             {/* Transaction Type */}
@@ -452,7 +458,9 @@ export default function Home() {
                 <h2 className="font-serif text-lg font-bold text-foreground">Backup Server</h2>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Data terbaru diperbarui otomatis setiap beberapa detik.
+                {activeStore
+                  ? `Data ${activeStore} diperbarui otomatis setiap beberapa detik.`
+                  : 'Masukkan nama toko aktif untuk melihat saldo dan riwayatnya.'}
               </p>
             </div>
             <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground border border-border rounded-full px-2 py-1">
@@ -460,7 +468,14 @@ export default function Home() {
             </span>
           </div>
 
-          {isRecentLoading ? (
+          {!activeStore ? (
+            <div className="rounded-xl border border-dashed border-border px-4 py-5 text-center">
+              <p className="text-sm font-medium text-foreground">Toko belum dipilih</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Isi Toko Aktif di atas agar data toko lain tidak ikut tercampur.
+              </p>
+            </div>
+          ) : isRecentLoading ? (
             <div className="text-sm text-muted-foreground py-3">Memuat data server...</div>
           ) : recentEntries.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border px-4 py-5 text-center">
